@@ -9,32 +9,36 @@ import (
 )
 
 
-func TokenBucketRateLimit(ctx context.Context, redisClient *redis.Client, userId string,
-	refillWindow int64, maximumRequests int64) bool {
+func TokenBucketRateLimit(
+	ctx context.Context, redisClient *redis.Client, 
+	userId string, refillWindow int64, maximumTokens int64) bool {
 
-		tokenBucketKey := "token_bucket:" + userId
-		lastRefillTimeKey := "last_refill_time:" + userId
+	tokenKey := "token"
+	lastRefillTimeKey := "last_refill_time"
+	tokenBucket := "rate_limiting:" + userId
 
-		lastRefillTimeInStr := redisClient.Get(ctx, lastRefillTimeKey).Val()
-		lastRefillTime, _ := strconv.ParseInt(lastRefillTimeInStr, 10, 64)
+	tokenCountStr := redisClient.HGet(ctx, tokenBucket, tokenKey)
+	lastRefillTimeStr := redisClient.HGet(ctx, tokenBucket, lastRefillTimeKey)
 
-		currentTime := time.Now().Unix()
-		timeElapsed := currentTime - lastRefillTime
+	tokenCount, _ := strconv.ParseInt(tokenCountStr.Val(), 10, 64)
+	lastRefillTime, _ := strconv.ParseInt(lastRefillTimeStr.Val(), 10, 64)
+
+	currentTime := time.Now().Unix()
+	timeElapsed := currentTime - lastRefillTime
 		
-		// Calculate the number of tokens to be added to the bucket since the last refill
-		if timeElapsed >= refillWindow {
-			redisClient.Set(ctx, tokenBucketKey, strconv.FormatInt(maximumRequests, 10), 0)
-			redisClient.Set(ctx, lastRefillTimeKey, strconv.FormatInt(currentTime, 10), 0)
-		} else {
-			token := redisClient.Get(ctx, tokenBucketKey).Val()
-			tokenCount, _ := strconv.ParseInt(token, 10, 64)
+	if timeElapsed >= refillWindow { 
+		tokenCount = maximumTokens
+		lastRefillTime = currentTime
+	} 
 
-			if tokenCount <= 0 {
-				return false
-			}
-		}
+	if tokenCount <= 0 {
+		return false
+	}
 
-		// Consume a token and proceed with request
-		redisClient.Decr(ctx, tokenBucketKey)
-		return true
+	tokenCount--
+	redisClient.HSet(ctx, tokenBucket, map[string]interface{}{
+		tokenKey: tokenCount,
+		lastRefillTimeKey: currentTime,
+	}).Val()
+	return true
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"time"
 	"fmt"
 	"context"
 	"net/http"
@@ -27,16 +26,10 @@ func main() {
 	// leakRate := int64(5) // 5 request per second
 	refillWindow := int64(60) // 60 seconds
 	// windowLengthInSeconds := int64(60) // window size is 60 seconds
-	maximumRequests := int64(10) // maximum 10 requests per window
+	maximumTokens := int64(10) // maximum 10 requests per window
 
 	for i := 1; i <= 25; i++ {
-		isAllowed := TokenBucketRateLimit(ctx, redisClient, userId, refillWindow, maximumRequests)
-		fmt.Printf("Request %d status - allowed: %t \n", i, isAllowed)
-	}
-
-	time.Sleep(1 * time.Second)
-	for i := 26; i <= 50; i++ {
-		isAllowed := TokenBucketRateLimit(ctx, redisClient, userId, refillWindow, maximumRequests)
+		isAllowed := TokenBucketRateLimit(ctx, redisClient, userId, refillWindow, maximumTokens)
 		fmt.Printf("Request %d status - allowed: %t \n", i, isAllowed)
 	}
 
