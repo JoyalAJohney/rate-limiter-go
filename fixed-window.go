@@ -9,10 +9,11 @@ import (
 )
 
 
-func FixedWindowRateLimit(ctx context.Context, redisClient *redis.Client, userId string,
-	windowLengthInSeconds int64, maximumRequests int64) bool {
+func FixedWindowRateLimit(
+	ctx context.Context, redisClient *redis.Client,
+	userId string, windowLengthInSeconds int64, maximumRequests int64) bool {
 	/* 
-		Gives me number of windows till now,
+		Gives the number of windows till now,
 		Ex: 2343 windows till now means, the current window is 2343
 	*/
 	currentWindow := strconv.FormatInt(time.Now().Unix() / windowLengthInSeconds, 10)
